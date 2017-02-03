@@ -111,7 +111,7 @@ func (server *Server) HandleConnection(conn net.Conn) {
 		}
 
 		ping.Players = protocol.PingPlayers{
-			Max:    9999,
+			Max:    int(server.maxPlayers),
 			Online: int(server.playerCount),
 		}
 
