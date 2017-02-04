@@ -1,13 +1,14 @@
 package server
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net"
 	"strconv"
 
+	"../message/"
 	"../protocol"
+	"../protocol/auth"
 
 	"gopkg.in/yaml.v2"
 )
@@ -19,6 +20,10 @@ type Server struct {
 
 	listener net.Listener
 	running  bool
+
+	protocolVersion int
+
+	authenticator auth.Authenticator
 
 	Motd string
 
@@ -37,12 +42,14 @@ func CreateServer(host string, port int) *Server {
 	yaml.Unmarshal(data, &settings)
 
 	server := &Server{
-		Host:        host,
-		Port:        port,
-		running:     true,
-		Motd:        settings.Motd,
-		playerCount: 0,
-		maxPlayers:  settings.MaxPlayers,
+		Host:            host,
+		Port:            port,
+		running:         true,
+		protocolVersion: 316,
+		authenticator:   auth.Instance,
+		Motd:            settings.Motd,
+		playerCount:     0,
+		maxPlayers:      settings.MaxPlayers,
 	}
 
 	return server
@@ -91,7 +98,7 @@ func (server *Server) HandleConnection(conn net.Conn) {
 		return
 	}
 
-	handshake, ok := packet.(protocol.Handshake)
+	handshake, ok := packet.(*protocol.Handshake)
 
 	if !ok {
 		return
@@ -100,14 +107,15 @@ func (server *Server) HandleConnection(conn net.Conn) {
 	if handshake.State == 1 {
 		minecraftConnection.State = protocol.Status
 		packet, err := minecraftConnection.ReadPacket()
-		if _, ok := packet.(protocol.StatusGet); !ok || err != nil {
+
+		if _, ok := packet.(*protocol.StatusGet); !ok || err != nil {
 			return
 		}
 
 		ping := &protocol.Ping{}
 		ping.Version = protocol.PingVersion{
 			Name:     "GoServe",
-			Protocol: 47,
+			Protocol: server.protocolVersion,
 		}
 
 		ping.Players = protocol.PingPlayers{
@@ -117,13 +125,8 @@ func (server *Server) HandleConnection(conn net.Conn) {
 
 		ping.Description = server.Motd
 
-		by, err := json.Marshal(ping)
-		if err != nil {
-			return
-		}
-
-		statusResponse := protocol.StatusResponse{
-			Data: string(by),
+		statusResponse := &protocol.StatusResponse{
+			Data: ping,
 		}
 
 		minecraftConnection.WritePacket(statusResponse)
@@ -132,12 +135,26 @@ func (server *Server) HandleConnection(conn net.Conn) {
 		if err != nil {
 			return
 		}
-		cPing, ok := packet.(protocol.ClientStatusPing)
+
+		cPing, ok := packet.(*protocol.ClientStatusPing)
 
 		if !ok {
 			return
 		}
-		minecraftConnection.WritePacket(protocol.StatusPing{Time: cPing.Time})
+		minecraftConnection.WritePacket(&protocol.StatusPing{Time: cPing.Time})
 		return
 	}
+
+	if handshake.State != 2 {
+		return
+	}
+
+	name, uuid, err := minecraftConnection.Login(handshake, server.authenticator, server.protocolVersion)
+
+	if err != nil {
+		minecraftConnection.WritePacket(&protocol.LoginDisconnect{(&message.Message{Text: err.Error(), Color: message.Red}).JSONString()})
+		return
+	}
+
+	log.Println("Successfully authenticated " + name + " (" + uuid + ")!")
 }
