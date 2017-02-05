@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -36,7 +37,7 @@ type Authenticator interface {
 }
 
 //Login function authenticates a player who tries to join server
-func (conn *Conn) Login(handshake *Handshake, authenticator Authenticator, protocolVersion int) (name string, uuid string, err error) {
+func (conn *Conn) Login(handshake *Handshake, authenticator Authenticator, protocolVersion int, onlineMode bool) (name string, uuid string, err error) {
 	if handshake.ProtocolVersion > VarInt(protocolVersion) {
 		return "", "", errors.New("Server out of date!")
 	} else if handshake.ProtocolVersion < VarInt(protocolVersion) {
@@ -60,7 +61,7 @@ func (conn *Conn) Login(handshake *Handshake, authenticator Authenticator, proto
 	rand.Read(verifyToken)
 
 	var serverID = "-"
-	if authenticator != nil {
+	if onlineMode {
 		serverBytes := make([]byte, 10)
 		rand.Read(serverBytes)
 		serverID = hex.EncodeToString(serverBytes)
@@ -99,15 +100,17 @@ func (conn *Conn) Login(handshake *Handshake, authenticator Authenticator, proto
 		return
 	}
 
-	if authenticator != nil {
+	if onlineMode {
 		if uuid, err = authenticator.Authenticate(name, serverID, sharedSecret, publicKeyBytes); err != nil {
 			return
 		}
 	} else {
-		idBytes := make([]byte, 16)
-		rand.Read(idBytes)
-		uuid = hex.EncodeToString(idBytes)
+		md5 := md5.Sum([]byte("OfflinePlayer:" + name))
+		uuid = hex.EncodeToString(md5[:])
 	}
+
+	//Add hyphens to UUID
+	uuid = uuid[0:8] + "-" + uuid[8:12] + "-" + uuid[12:16] + "-" + uuid[16:20] + "-" + uuid[20:32]
 
 	aesCipher, err := aes.NewCipher(sharedSecret)
 	if err != nil {

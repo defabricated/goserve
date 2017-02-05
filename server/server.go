@@ -29,6 +29,8 @@ type Server struct {
 
 	playerCount int32
 	maxPlayers  int32
+
+	onlineMode bool
 }
 
 var GoServer *Server
@@ -50,6 +52,7 @@ func CreateServer(host string, port int) *Server {
 		Motd:            settings.Motd,
 		playerCount:     0,
 		maxPlayers:      settings.MaxPlayers,
+		onlineMode:      settings.OnlineMode,
 	}
 
 	return server
@@ -106,7 +109,7 @@ func (server *Server) HandleConnection(conn net.Conn) {
 
 	if handshake.State == 1 {
 		minecraftConnection.State = protocol.Status
-		packet, err := minecraftConnection.ReadPacket()
+		packet, _ := minecraftConnection.ReadPacket()
 
 		if _, ok := packet.(*protocol.StatusGet); !ok || err != nil {
 			return
@@ -149,7 +152,7 @@ func (server *Server) HandleConnection(conn net.Conn) {
 		return
 	}
 
-	name, uuid, err := minecraftConnection.Login(handshake, server.authenticator, server.protocolVersion)
+	name, uuid, err := minecraftConnection.Login(handshake, server.authenticator, server.protocolVersion, server.onlineMode)
 
 	if err != nil {
 		minecraftConnection.WritePacket(&protocol.LoginDisconnect{(&message.Message{Text: err.Error(), Color: message.Red}).JSONString()})

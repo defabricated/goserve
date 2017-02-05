@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-
-	"github.com/landjur/golibrary/uuid"
 )
 
 var Instance = Authenticator{}
@@ -58,10 +56,7 @@ func (Authenticator) Authenticate(username string, serverID string, sharedSecret
 		return "", ErrorAuthFailed
 	}
 
-	//Add hyphens to UUID
-	uuid, _ := uuid.Parse(res.ID)
-
-	return uuid.String(), nil
+	return res.ID, nil
 }
 
 func twosCompliment(p []byte) {
