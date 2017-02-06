@@ -5,6 +5,105 @@ import (
 	"io/ioutil"
 )
 
+//SpawnObject packet
+type SpawnObject struct {
+	EntityID   VarInt
+	ObjectUUID UUID
+	Type       byte
+	X          int32
+	Y          int32
+	Z          int32
+	Pitch      int8
+	Yaw        int8
+	Data       int32
+	SpeedX     int16
+	SpeedY     int16
+	SpeedZ     int16
+}
+
+func (s *SpawnObject) id() int { return 1 }
+
+func (s *SpawnObject) write(ww io.Writer) (err error) {
+	if err = WriteVarInt(ww, s.EntityID); err != nil {
+		return
+	}
+	if err = s.ObjectUUID.Write(ww); err != nil {
+		return
+	}
+	if err = WriteByte(ww, s.Type); err != nil {
+		return
+	}
+	if err = WriteInt32(ww, s.X); err != nil {
+		return
+	}
+	if err = WriteInt32(ww, s.Y); err != nil {
+		return
+	}
+	if err = WriteInt32(ww, s.Z); err != nil {
+		return
+	}
+	if err = WriteInt8(ww, s.Pitch); err != nil {
+		return
+	}
+	if err = WriteInt8(ww, s.Yaw); err != nil {
+		return
+	}
+	if err = WriteInt32(ww, s.Data); err != nil {
+		return
+	}
+	if err = WriteInt16(ww, s.SpeedX); err != nil {
+		return
+	}
+	if err = WriteInt16(ww, s.SpeedY); err != nil {
+		return
+	}
+	if err = WriteInt16(ww, s.SpeedZ); err != nil {
+		return
+	}
+	return
+}
+
+func (s *SpawnObject) read(rr io.Reader) (err error) {
+	if s.EntityID, err = ReadVarInt(rr); err != nil {
+		return
+	}
+	if err = s.ObjectUUID.Read(rr); err != nil {
+		return
+	}
+	if s.Type, err = ReadByte(rr); err != nil {
+		return
+	}
+	if s.X, err = ReadInt32(rr); err != nil {
+		return
+	}
+	if s.Y, err = ReadInt32(rr); err != nil {
+		return
+	}
+	if s.Z, err = ReadInt32(rr); err != nil {
+		return
+	}
+	if s.Pitch, err = ReadInt8(rr); err != nil {
+		return
+	}
+	if s.Yaw, err = ReadInt8(rr); err != nil {
+		return
+	}
+	if s.Data, err = ReadInt32(rr); err != nil {
+		return
+	}
+	if s.SpeedX, err = ReadInt16(rr); err != nil {
+		return
+	}
+	if s.SpeedY, err = ReadInt16(rr); err != nil {
+		return
+	}
+	if s.SpeedZ, err = ReadInt16(rr); err != nil {
+		return
+	}
+	return
+}
+
+//PluginMessageClientbound packet
 type PluginMessageClientbound struct {
 	Channel string
 	Data    []byte
@@ -32,6 +131,7 @@ func (p *PluginMessageClientbound) read(rr io.Reader) (err error) {
 	return
 }
 
+//Disconnect packet
 type Disconnect struct {
 	Data string
 }
@@ -52,6 +152,7 @@ func (d *Disconnect) read(rr io.Reader) (err error) {
 	return
 }
 
+//JoinGame packet
 type JoinGame struct {
 	EntityID         int32
 	Gamemode         byte
@@ -65,31 +166,19 @@ type JoinGame struct {
 func (j *JoinGame) id() int { return 35 }
 
 func (j *JoinGame) write(ww io.Writer) (err error) {
-	var tmp [4]byte
-	tmp[0] = byte(j.EntityID >> 24)
-	tmp[1] = byte(j.EntityID >> 16)
-	tmp[2] = byte(j.EntityID >> 8)
-	tmp[3] = byte(j.EntityID >> 0)
-	if _, err = ww.Write(tmp[:4]); err != nil {
+	if err = WriteInt32(ww, j.EntityID); err != nil {
 		return
 	}
-	tmp[0] = byte(j.Gamemode >> 0)
-	if _, err = ww.Write(tmp[:1]); err != nil {
+	if err = WriteByte(ww, j.Gamemode); err != nil {
 		return
 	}
-	tmp[0] = byte(j.Dimension >> 24)
-	tmp[1] = byte(j.Dimension >> 16)
-	tmp[2] = byte(j.Dimension >> 8)
-	tmp[3] = byte(j.Dimension >> 0)
-	if _, err = ww.Write(tmp[:4]); err != nil {
+	if err = WriteInt32(ww, j.Dimension); err != nil {
 		return
 	}
-	tmp[0] = byte(j.Difficulty >> 0)
-	if _, err = ww.Write(tmp[:1]); err != nil {
+	if err = WriteByte(ww, j.Difficulty); err != nil {
 		return
 	}
-	tmp[0] = byte(j.MaxPlayers >> 0)
-	if _, err = ww.Write(tmp[:1]); err != nil {
+	if err = WriteByte(ww, j.MaxPlayers); err != nil {
 		return
 	}
 	if err = WriteString(ww, j.LevelType); err != nil {
@@ -102,27 +191,21 @@ func (j *JoinGame) write(ww io.Writer) (err error) {
 }
 
 func (j *JoinGame) read(rr io.Reader) (err error) {
-	var tmp [4]byte
-	if _, err = rr.Read(tmp[:4]); err != nil {
+	if j.EntityID, err = ReadInt32(rr); err != nil {
 		return
 	}
-	j.EntityID = int32((uint32(tmp[3]) << 0) | (uint32(tmp[2]) << 8) | (uint32(tmp[1]) << 16) | (uint32(tmp[0]) << 24))
-	if _, err = rr.Read(tmp[:1]); err != nil {
+	if j.Gamemode, err = ReadByte(rr); err != nil {
 		return
 	}
-	j.Gamemode = (byte(tmp[0]) << 0)
-	if _, err = rr.Read(tmp[:1]); err != nil {
+	if j.Dimension, err = ReadInt32(rr); err != nil {
 		return
 	}
-	j.Dimension = int32((uint32(tmp[3]) << 0) | (uint32(tmp[2]) << 8) | (uint32(tmp[1]) << 16) | (uint32(tmp[0]) << 24))
-	if _, err = rr.Read(tmp[:1]); err != nil {
+	if j.Difficulty, err = ReadByte(rr); err != nil {
 		return
 	}
-	j.Difficulty = (byte(tmp[0]) << 0)
-	if _, err = rr.Read(tmp[:1]); err != nil {
+	if j.MaxPlayers, err = ReadByte(rr); err != nil {
 		return
 	}
-	j.MaxPlayers = (byte(tmp[0]) << 0)
 	if j.LevelType, err = ReadString(rr); err != nil {
 		return
 	}
@@ -133,6 +216,7 @@ func (j *JoinGame) read(rr io.Reader) (err error) {
 }
 
 func init() {
+	packetList[Play][Clientbound][1] = func() Packet { return &SpawnObject{} }
 	packetList[Play][Clientbound][24] = func() Packet { return &PluginMessageClientbound{} }
 	packetList[Play][Clientbound][26] = func() Packet { return &Disconnect{} }
 	packetList[Play][Clientbound][35] = func() Packet { return &JoinGame{} }

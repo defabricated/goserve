@@ -8,6 +8,7 @@ import (
 
 type VarInt int32
 type VarLong int64
+type UUID [16]byte
 
 const varPart = uint32(0x7F)
 const varPartLong = uint64(0x7F)
@@ -65,6 +66,56 @@ func ReadVarInt(r io.Reader) (VarInt, error) {
 		}
 	}
 	return VarInt(val), nil
+}
+
+func WriteInt32(w io.Writer, i int32) error {
+	var tmp [4]byte
+	tmp[0] = byte(i >> 24)
+	tmp[1] = byte(i >> 16)
+	tmp[2] = byte(i >> 8)
+	tmp[3] = byte(i >> 0)
+	if _, err := w.Write(tmp[:4]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ReadInt32(r io.Reader) (int32, error) {
+	var tmp [4]byte
+	if _, err := r.Read(tmp[:4]); err != nil {
+		return 0, err
+	}
+	i := int32((uint32(tmp[3]) << 0) | (uint32(tmp[2]) << 8) | (uint32(tmp[1]) << 16) | (uint32(tmp[0]) << 24))
+	return i, nil
+}
+
+func WriteInt16(w io.Writer, i int16) error {
+	var tmp [2]byte
+	tmp[0] = byte(i >> 8)
+	tmp[1] = byte(i >> 0)
+	if _, err := w.Write(tmp[:2]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ReadInt16(r io.Reader) (int16, error) {
+	var tmp [2]byte
+	if _, err := r.Read(tmp[:2]); err != nil {
+		return 0, err
+	}
+	i := int16((uint16(tmp[1]) << 0) | (uint16(tmp[0]) << 8))
+	return i, nil
+}
+
+func WriteInt8(w io.Writer, i int8) error {
+	err := WriteByte(w, byte(i))
+	return err
+}
+
+func ReadInt8(r io.Reader) (int8, error) {
+	b, err := ReadByte(r)
+	return int8(b), err
 }
 
 func WriteVarLong(w io.Writer, i VarLong) error {
@@ -159,4 +210,14 @@ func ReadByte(r io.Reader) (byte, error) {
 	var buf [1]byte
 	_, err := r.Read(buf[:1])
 	return buf[0], err
+}
+
+func (u *UUID) Write(w io.Writer) error {
+	_, err := w.Write(u[:])
+	return err
+}
+
+func (u *UUID) Read(r io.Reader) error {
+	_, err := io.ReadFull(r, u[:])
+	return err
 }
