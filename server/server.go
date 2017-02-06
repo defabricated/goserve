@@ -6,6 +6,7 @@ import (
 	"net"
 	"strconv"
 
+	"../entity/"
 	"../message/"
 	"../protocol"
 	"../protocol/auth"
@@ -160,4 +161,8 @@ func (server *Server) HandleConnection(conn net.Conn) {
 	}
 
 	log.Println("Successfully authenticated " + name + " (" + uuid + ")!")
+
+	player := entity.NewPlayer(name, uuid, minecraftConnection)
+
+	player.Join()
 }

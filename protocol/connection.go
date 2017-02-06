@@ -15,10 +15,9 @@ type Conn struct {
 
 	Deadliner Deadliner
 
-	b  [8]byte
-	rb [8]byte
+	State                State
+	compressionThreshold int
 
-	State          State
 	ReadDirection  Direction
 	WriteDirection Direction
 }
@@ -45,7 +44,7 @@ func (conn *Conn) ReadPacket() (Packet, error) {
 
 	buf := make([]byte, size)
 
-	if _, err := io.ReadFull(conn.In, buf); err != nil {
+	if _, err = io.ReadFull(conn.In, buf); err != nil {
 		return nil, err
 	}
 
@@ -98,8 +97,6 @@ func (conn *Conn) WritePacket(packet Packet) error {
 	if err := WriteVarInt(conn.Out, VarInt(buf.Len())); err != nil {
 		return err
 	}
-
-	//TODO Packet compression
 
 	_, err := buf.WriteTo(conn.Out)
 	return err
