@@ -285,6 +285,37 @@ func (j *JoinGame) read(rr io.Reader) (err error) {
 	return
 }
 
+type SpawnPosition struct {
+	Location Position
+}
+
+func (s *SpawnPosition) id() int { return 67 }
+
+func (s *SpawnPosition) write(ww io.Writer) (err error) {
+	var tmp [8]byte
+	tmp[0] = byte(s.Location >> 56)
+	tmp[1] = byte(s.Location >> 48)
+	tmp[2] = byte(s.Location >> 40)
+	tmp[3] = byte(s.Location >> 32)
+	tmp[4] = byte(s.Location >> 24)
+	tmp[5] = byte(s.Location >> 16)
+	tmp[6] = byte(s.Location >> 8)
+	tmp[7] = byte(s.Location >> 0)
+	if _, err = ww.Write(tmp[:8]); err != nil {
+		return
+	}
+	return
+}
+
+func (s *SpawnPosition) read(rr io.Reader) (err error) {
+	var tmp [8]byte
+	if _, err = rr.Read(tmp[:8]); err != nil {
+		return
+	}
+	s.Location = (Position(tmp[7]) << 0) | (Position(tmp[6]) << 8) | (Position(tmp[5]) << 16) | (Position(tmp[4]) << 24) | (Position(tmp[3]) << 32) | (Position(tmp[2]) << 40) | (Position(tmp[1]) << 48) | (Position(tmp[0]) << 56)
+	return
+}
+
 func init() {
 	packetList[Play][Clientbound][1] = func() Packet { return &SpawnObject{} }
 	packetList[Play][Clientbound][2] = func() Packet { return &SpawnExperienceOrb{} }
@@ -292,4 +323,5 @@ func init() {
 	packetList[Play][Clientbound][24] = func() Packet { return &PluginMessageClientbound{} }
 	packetList[Play][Clientbound][26] = func() Packet { return &Disconnect{} }
 	packetList[Play][Clientbound][35] = func() Packet { return &JoinGame{} }
+	packetList[Play][Clientbound][67] = func() Packet { return &SpawnPosition{} }
 }

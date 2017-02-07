@@ -13,6 +13,24 @@ type UUID [16]byte
 const varPart = uint32(0x7F)
 const varPartLong = uint64(0x7F)
 
+type Position uint64
+
+func NewPosition(x, y, z int) Position {
+	return ((Position(x) & 0x3FFFFFF) << 38) | ((Position(y) & 0xFFF) << 26) | (Position(z) & 0x3FFFFFF)
+}
+
+func (p Position) X() int {
+	return int(int64(p) >> 38)
+}
+
+func (p Position) Y() int {
+	return int((int64(p) >> 26) & 0xFFF)
+}
+
+func (p Position) Z() int {
+	return int(int64(p) << 38 >> 38)
+}
+
 var (
 	ErrVarIntTooLarge  = errors.New("VarInt too large")
 	ErrVarLongTooLarge = errors.New("VarLong too large")
