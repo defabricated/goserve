@@ -152,6 +152,27 @@ func (s *SpawnExperienceOrb) read(rr io.Reader) (err error) {
 	return
 }
 
+//ServerDifficulty packet
+type ServerDifficulty struct {
+	Difficulty byte
+}
+
+func (s *ServerDifficulty) id() int { return 13 }
+
+func (s *ServerDifficulty) write(ww io.Writer) (err error) {
+	if err = WriteByte(ww, s.Difficulty); err != nil {
+		return
+	}
+	return
+}
+
+func (s *ServerDifficulty) read(rr io.Reader) (err error) {
+	if s.Difficulty, err = ReadByte(rr); err != nil {
+		return
+	}
+	return
+}
+
 //PluginMessageClientbound packet
 type PluginMessageClientbound struct {
 	Channel string
@@ -267,6 +288,7 @@ func (j *JoinGame) read(rr io.Reader) (err error) {
 func init() {
 	packetList[Play][Clientbound][1] = func() Packet { return &SpawnObject{} }
 	packetList[Play][Clientbound][2] = func() Packet { return &SpawnExperienceOrb{} }
+	packetList[Play][Clientbound][13] = func() Packet { return &ServerDifficulty{} }
 	packetList[Play][Clientbound][24] = func() Packet { return &PluginMessageClientbound{} }
 	packetList[Play][Clientbound][26] = func() Packet { return &Disconnect{} }
 	packetList[Play][Clientbound][35] = func() Packet { return &JoinGame{} }
