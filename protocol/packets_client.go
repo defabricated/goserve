@@ -103,6 +103,55 @@ func (s *SpawnObject) read(rr io.Reader) (err error) {
 	return
 }
 
+//SpawnExperienceOrb packet
+type SpawnExperienceOrb struct {
+	EntityID VarInt
+	X        int32
+	Y        int32
+	Z        int32
+	Count    int16
+}
+
+func (s *SpawnExperienceOrb) id() int { return 2 }
+
+func (s *SpawnExperienceOrb) write(ww io.Writer) (err error) {
+	if err = WriteVarInt(ww, s.EntityID); err != nil {
+		return
+	}
+	if err = WriteInt32(ww, s.X); err != nil {
+		return
+	}
+	if err = WriteInt32(ww, s.Y); err != nil {
+		return
+	}
+	if err = WriteInt32(ww, s.Z); err != nil {
+		return
+	}
+	if err = WriteInt16(ww, s.Count); err != nil {
+		return
+	}
+	return
+}
+
+func (s *SpawnExperienceOrb) read(rr io.Reader) (err error) {
+	if s.EntityID, err = ReadVarInt(rr); err != nil {
+		return
+	}
+	if s.X, err = ReadInt32(rr); err != nil {
+		return
+	}
+	if s.Y, err = ReadInt32(rr); err != nil {
+		return
+	}
+	if s.Z, err = ReadInt32(rr); err != nil {
+		return
+	}
+	if s.Count, err = ReadInt16(rr); err != nil {
+		return
+	}
+	return
+}
+
 //PluginMessageClientbound packet
 type PluginMessageClientbound struct {
 	Channel string
@@ -217,6 +266,7 @@ func (j *JoinGame) read(rr io.Reader) (err error) {
 
 func init() {
 	packetList[Play][Clientbound][1] = func() Packet { return &SpawnObject{} }
+	packetList[Play][Clientbound][2] = func() Packet { return &SpawnExperienceOrb{} }
 	packetList[Play][Clientbound][24] = func() Packet { return &PluginMessageClientbound{} }
 	packetList[Play][Clientbound][26] = func() Packet { return &Disconnect{} }
 	packetList[Play][Clientbound][35] = func() Packet { return &JoinGame{} }
