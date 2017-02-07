@@ -52,6 +52,10 @@ func (player *Player) Join() {
 		Data:    []byte("GoServe"),
 	})
 
+	player.QueuePacket(&protocol.ServerDifficulty{
+		Difficulty: 0,
+	})
+
 	time.Sleep(time.Second * 3)
 
 	player.QueuePacket(&protocol.Disconnect{
