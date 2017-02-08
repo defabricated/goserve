@@ -1,8 +1,12 @@
 package protocol
 
 import (
+	"encoding/json"
 	"io"
 	"io/ioutil"
+	"math"
+
+	"../message"
 )
 
 //SpawnObject packet
@@ -176,13 +180,16 @@ func (s *ServerDifficulty) read(rr io.Reader) (err error) {
 //PluginMessageClientbound packet
 type PluginMessageClientbound struct {
 	Channel string
-	Data    []byte
+	Data    []byte `length:"remaining"`
 }
 
 func (p *PluginMessageClientbound) id() int { return 24 }
 
 func (p *PluginMessageClientbound) write(ww io.Writer) (err error) {
 	if err = WriteString(ww, p.Channel); err != nil {
+		return
+	}
+	if err = WriteVarInt(ww, VarInt(len(p.Data))); err != nil {
 		return
 	}
 	if _, err = ww.Write(p.Data); err != nil {
@@ -203,22 +210,24 @@ func (p *PluginMessageClientbound) read(rr io.Reader) (err error) {
 
 //Disconnect packet
 type Disconnect struct {
-	Data string
+	Data message.Message
 }
 
 func (d *Disconnect) id() int { return 26 }
 
 func (d *Disconnect) write(ww io.Writer) (err error) {
-	if err = WriteString(ww, d.Data); err != nil {
+	if err = WriteString(ww, d.Data.JSONString()); err != nil {
 		return
 	}
 	return
 }
 
 func (d *Disconnect) read(rr io.Reader) (err error) {
-	if d.Data, err = ReadString(rr); err != nil {
+	data, err := ReadString(rr)
+	if err != nil {
 		return
 	}
+	json.Unmarshal([]byte(data), d.Data)
 	return
 }
 
@@ -285,6 +294,60 @@ func (j *JoinGame) read(rr io.Reader) (err error) {
 	return
 }
 
+type PlayerAbilities struct {
+	Flags        byte
+	FlyingSpeed  float32
+	WalkingSpeed float32
+}
+
+func (p *PlayerAbilities) id() int { return 43 }
+
+func (p *PlayerAbilities) write(ww io.Writer) (err error) {
+	var tmp [4]byte
+	tmp[0] = byte(p.Flags >> 0)
+	if _, err = ww.Write(tmp[:1]); err != nil {
+		return
+	}
+	tmp0 := math.Float32bits(p.FlyingSpeed)
+	tmp[0] = byte(tmp0 >> 24)
+	tmp[1] = byte(tmp0 >> 16)
+	tmp[2] = byte(tmp0 >> 8)
+	tmp[3] = byte(tmp0 >> 0)
+	if _, err = ww.Write(tmp[:4]); err != nil {
+		return
+	}
+	tmp1 := math.Float32bits(p.WalkingSpeed)
+	tmp[0] = byte(tmp1 >> 24)
+	tmp[1] = byte(tmp1 >> 16)
+	tmp[2] = byte(tmp1 >> 8)
+	tmp[3] = byte(tmp1 >> 0)
+	if _, err = ww.Write(tmp[:4]); err != nil {
+		return
+	}
+	return
+}
+
+func (p *PlayerAbilities) read(rr io.Reader) (err error) {
+	var tmp [4]byte
+	if _, err = rr.Read(tmp[:1]); err != nil {
+		return
+	}
+	p.Flags = (byte(tmp[0]) << 0)
+	var tmp0 uint32
+	if _, err = rr.Read(tmp[:4]); err != nil {
+		return
+	}
+	tmp0 = (uint32(tmp[3]) << 0) | (uint32(tmp[2]) << 8) | (uint32(tmp[1]) << 16) | (uint32(tmp[0]) << 24)
+	p.FlyingSpeed = math.Float32frombits(tmp0)
+	var tmp1 uint32
+	if _, err = rr.Read(tmp[:4]); err != nil {
+		return
+	}
+	tmp1 = (uint32(tmp[3]) << 0) | (uint32(tmp[2]) << 8) | (uint32(tmp[1]) << 16) | (uint32(tmp[0]) << 24)
+	p.WalkingSpeed = math.Float32frombits(tmp1)
+	return
+}
+
 type SpawnPosition struct {
 	Location Position
 }
@@ -323,5 +386,6 @@ func init() {
 	packetList[Play][Clientbound][24] = func() Packet { return &PluginMessageClientbound{} }
 	packetList[Play][Clientbound][26] = func() Packet { return &Disconnect{} }
 	packetList[Play][Clientbound][35] = func() Packet { return &JoinGame{} }
+	packetList[Play][Clientbound][43] = func() Packet { return &PlayerAbilities{} }
 	packetList[Play][Clientbound][67] = func() Packet { return &SpawnPosition{} }
 }

@@ -1,6 +1,8 @@
 package entity
 
 import (
+	"errors"
+	"log"
 	"time"
 
 	"../message"
@@ -19,6 +21,12 @@ type Player struct {
 	ClosedChannel chan struct{}
 
 	ping int32
+
+	brand string
+
+	settings struct {
+		locale string
+	}
 }
 
 func NewPlayer(name string, uuid string, conn *protocol.Conn) *Player {
@@ -56,17 +64,50 @@ func (player *Player) Join() {
 		Difficulty: 0,
 	})
 
-	time.Sleep(time.Second * 3)
-
-	player.QueuePacket(&protocol.Disconnect{
-		Data: (&message.Message{Text: "Successfully joined to server!", Color: message.Blue}).JSONString(),
+	player.QueuePacket(&protocol.SpawnPosition{
+		Location: protocol.NewPosition(0, 64, 0),
 	})
+
+	player.QueuePacket(&protocol.PlayerAbilities{
+		Flags:        0,
+		FlyingSpeed:  1,
+		WalkingSpeed: 1,
+	})
+
+	tick := time.NewTicker(time.Second / 10)
+	defer tick.Stop()
+
+	for {
+		select {
+		case err := <-player.errorChannel:
+			log.Printf("Player %s error: %s\n", player.Name, err)
+			return
+		case packet := <-player.packetRead:
+			player.handlePacket(packet)
+		}
+	}
 }
 
+//Disconnect function disconnects the player from the server
+func (player *Player) Disconnect(reason message.Message) {
+	player.QueuePacket(&protocol.Disconnect{reason})
+	player.errorChannel <- errors.New(reason.Text)
+}
+
+//QueuePacket queues a packet to be sent to the player
 func (player *Player) QueuePacket(packet protocol.Packet) {
 	select {
 	case player.packetQueue <- packet:
 	case <-player.ClosedChannel:
+	}
+}
+
+func (player *Player) handlePacket(packet protocol.Packet) {
+	switch packet := packet.(type) {
+	case *protocol.ClientSettings:
+		player.settings.locale = packet.Locale
+
+		player.Disconnect(message.Message{Text: "Successfully joined to server!", Color: message.Blue})
 	}
 }
 
