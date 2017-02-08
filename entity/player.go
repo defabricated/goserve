@@ -25,7 +25,12 @@ type Player struct {
 	brand string
 
 	settings struct {
-		locale string
+		locale             string
+		viewDistance       byte
+		chatMode           protocol.VarInt
+		chatColors         bool
+		displayedSkinParts byte
+		mainHand           protocol.VarInt
 	}
 }
 
@@ -74,6 +79,16 @@ func (player *Player) Join() {
 		WalkingSpeed: 1,
 	})
 
+	player.QueuePacket(&protocol.TeleportPlayer{
+		X:          0,
+		Y:          64,
+		Z:          0,
+		Yaw:        0,
+		Pitch:      0,
+		Flags:      0,
+		TeleportID: 0,
+	})
+
 	tick := time.NewTicker(time.Second / 10)
 	defer tick.Stop()
 
@@ -106,8 +121,11 @@ func (player *Player) handlePacket(packet protocol.Packet) {
 	switch packet := packet.(type) {
 	case *protocol.ClientSettings:
 		player.settings.locale = packet.Locale
-
-		player.Disconnect(message.Message{Text: "Successfully joined to server!", Color: message.Blue})
+		player.settings.viewDistance = packet.ViewDistance
+		player.settings.chatMode = packet.ChatMode
+		player.settings.chatColors = packet.ChatColors
+		player.settings.displayedSkinParts = packet.DisplayedSkinParts
+		player.settings.mainHand = packet.MainHand
 	}
 }
 

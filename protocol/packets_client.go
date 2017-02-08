@@ -348,6 +348,65 @@ func (p *PlayerAbilities) read(rr io.Reader) (err error) {
 	return
 }
 
+type TeleportPlayer struct {
+	X, Y, Z    float64
+	Yaw, Pitch float32
+	Flags      byte
+	TeleportID VarInt
+}
+
+func (t *TeleportPlayer) id() int { return 46 }
+
+func (t *TeleportPlayer) write(ww io.Writer) (err error) {
+	if err = WriteFloat64(ww, t.X); err != nil {
+		return
+	}
+	if err = WriteFloat64(ww, t.Y); err != nil {
+		return
+	}
+	if err = WriteFloat64(ww, t.Z); err != nil {
+		return
+	}
+	if err = WriteFloat32(ww, t.Yaw); err != nil {
+		return
+	}
+	if err = WriteFloat32(ww, t.Pitch); err != nil {
+		return
+	}
+	if err = WriteByte(ww, t.Flags); err != nil {
+		return
+	}
+	if err = WriteVarInt(ww, t.TeleportID); err != nil {
+		return
+	}
+	return
+}
+
+func (t *TeleportPlayer) read(rr io.Reader) (err error) {
+	if t.X, err = ReadFloat64(rr); err != nil {
+		return
+	}
+	if t.Y, err = ReadFloat64(rr); err != nil {
+		return
+	}
+	if t.Z, err = ReadFloat64(rr); err != nil {
+		return
+	}
+	if t.Yaw, err = ReadFloat32(rr); err != nil {
+		return
+	}
+	if t.Pitch, err = ReadFloat32(rr); err != nil {
+		return
+	}
+	if t.Flags, err = ReadByte(rr); err != nil {
+		return
+	}
+	if t.TeleportID, err = ReadVarInt(rr); err != nil {
+		return
+	}
+	return
+}
+
 type SpawnPosition struct {
 	Location Position
 }
@@ -387,5 +446,6 @@ func init() {
 	packetList[Play][Clientbound][26] = func() Packet { return &Disconnect{} }
 	packetList[Play][Clientbound][35] = func() Packet { return &JoinGame{} }
 	packetList[Play][Clientbound][43] = func() Packet { return &PlayerAbilities{} }
+	packetList[Play][Clientbound][46] = func() Packet { return &TeleportPlayer{} }
 	packetList[Play][Clientbound][67] = func() Packet { return &SpawnPosition{} }
 }

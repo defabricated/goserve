@@ -173,6 +173,56 @@ func ReadVarLong(r io.Reader) (VarLong, error) {
 	return VarLong(val), nil
 }
 
+func WriteFloat64(w io.Writer, f float64) error {
+	var tmp [8]byte
+	tmp0 := math.Float64bits(f)
+	tmp[0] = byte(tmp0 >> 56)
+	tmp[1] = byte(tmp0 >> 48)
+	tmp[2] = byte(tmp0 >> 40)
+	tmp[3] = byte(tmp0 >> 32)
+	tmp[4] = byte(tmp0 >> 24)
+	tmp[5] = byte(tmp0 >> 16)
+	tmp[6] = byte(tmp0 >> 8)
+	tmp[7] = byte(tmp0 >> 0)
+	if _, err := w.Write(tmp[:8]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ReadFloat64(r io.Reader) (float64, error) {
+	var tmp [8]byte
+	var tmp0 uint64
+	if _, err := r.Read(tmp[:8]); err != nil {
+		return 0, err
+	}
+	tmp0 = (uint64(tmp[7]) << 0) | (uint64(tmp[6]) << 8) | (uint64(tmp[5]) << 16) | (uint64(tmp[4]) << 24) | (uint64(tmp[3]) << 32) | (uint64(tmp[2]) << 40) | (uint64(tmp[1]) << 48) | (uint64(tmp[0]) << 56)
+	return math.Float64frombits(tmp0), nil
+}
+
+func WriteFloat32(w io.Writer, f float32) error {
+	var tmp [8]byte
+	tmp0 := math.Float32bits(f)
+	tmp[0] = byte(tmp0 >> 24)
+	tmp[1] = byte(tmp0 >> 16)
+	tmp[2] = byte(tmp0 >> 8)
+	tmp[3] = byte(tmp0 >> 0)
+	if _, err := w.Write(tmp[:4]); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ReadFloat32(r io.Reader) (float32, error) {
+	var tmp [8]byte
+	var tmp0 uint32
+	if _, err := r.Read(tmp[:8]); err != nil {
+		return 0, err
+	}
+	tmp0 = (uint32(tmp[3]) << 0) | (uint32(tmp[2]) << 8) | (uint32(tmp[1]) << 16) | (uint32(tmp[0]) << 24)
+	return math.Float32frombits(tmp0), nil
+}
+
 func WriteString(w io.Writer, str string) error {
 	b := []byte(str)
 	err := WriteVarInt(w, VarInt(len(b)))
