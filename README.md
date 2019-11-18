@@ -1,2 +1,2 @@
 # goserve
-High performance Minecraft server written in Go
+Minecraft server written in Go
